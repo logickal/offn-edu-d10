@@ -1,0 +1,37 @@
+parameters:
+  monolog.channel_handlers:
+    default:
+      handlers:
+        - name: "new_relic_buffered"
+          processors:
+            - "drupal_message_placeholder"
+            - "new_relic_processor"
+        - name: "new_relic_error"
+
+services:
+  monolog.processor.new_relic_processor:
+    class: NewRelic\Monolog\Enricher\Processor
+
+  # Log API New Relic Processor
+  # Has build in buffering for New Relic requests.
+  monolog.handler.new_relic_log:
+    class: NewRelic\Monolog\Enricher\Handler
+    arguments: ["200", false]
+
+  # Log API New Relic Handler (buffered)
+  # Buffered handler waits for all messages before batch sending.
+  monolog.handler.new_relic_buffered:
+    class: Monolog\Handler\BufferHandler
+    arguments: ["@monolog.handler.new_relic_log"]
+
+  # Error Event New Relic Handler
+  # Uses newrelic_notice_error to send logs to the Triage Errors inbox.
+  monolog.handler.new_relic_error:
+    class: Monolog\Handler\NewRelicHandler
+    arguments: ["300", false]
+
+  # Rotating file
+  # Store logs in Pantheon's default log directory.
+  monolog.handler.rotating_file:
+    class: Monolog\Handler\RotatingFileHandler
+    arguments: ["/logs/php/application.log", "15", "200", false]
